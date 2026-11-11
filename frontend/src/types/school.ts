@@ -22,6 +22,23 @@ export interface RadarStandardItem {
   fullMark: number;
 }
 
+export type FollowUpStatus = 'waiting_response' | 'in_progress_school' | 'resolved';
+
+export interface OfficialSchoolResponse {
+  responderName: string;
+  responderRole: string;
+  text: string;
+  respondedAt: string;
+}
+
+export interface PublicFeedbackComment {
+  id: string;
+  author: string;
+  role: string;
+  text: string;
+  date: string;
+}
+
 export interface CitizenReportItem {
   id: string;
   author: string;
@@ -34,6 +51,14 @@ export interface CitizenReportItem {
   status: 'verified' | 'investigating' | 'countered';
   verifiedBy?: string;
   verifiedAt?: string;
+  // Two-Way Citizen Feedback Loop (Mentor Final Submission Feature 3)
+  followUpStatus?: FollowUpStatus;
+  officialResponse?: OfficialSchoolResponse;
+  satisfactionVotes?: {
+    satisfied: number;
+    unsatisfied: number;
+  };
+  publicComments?: PublicFeedbackComment[];
 }
 
 export interface BosBudgetData {
@@ -62,8 +87,12 @@ export interface School {
   npsn: string;
   name: string;
   level: SchoolLevel;
-  district: string; // e.g., 'Genteng, Surabaya'
-  city: string; // e.g., 'Kota Surabaya' or 'Kab. Sidoarjo'
+  // Granular Regional Hierarchy (Nasional -> Provinsi -> Kabupaten/Kota -> Kecamatan -> Sekolah)
+  provinsi?: string; // e.g., 'Jawa Timur', 'DKI Jakarta', 'Jawa Barat'
+  kabupatenKota?: string; // e.g., 'Kota Surabaya', 'Kab. Sidoarjo', 'Kota Malang', 'Jakarta Selatan', 'Kota Bandung'
+  kecamatan?: string; // e.g., 'Genteng', 'Wonokromo', 'Waru', 'Klojen'
+  district: string; // e.g., 'Genteng'
+  city: string; // e.g., 'Kota Surabaya'
   address: string;
   accreditationGrade: 'A' | 'B' | 'C' | 'Dalam Proses';
   lastAccreditationYear: number;
@@ -111,6 +140,9 @@ export interface CreateSchoolPayload {
   name: string;
   npsn: string;
   level: SchoolLevel;
+  provinsi?: string;
+  kabupatenKota?: string;
+  kecamatan?: string;
   district: string;
   city: string;
   address?: string;

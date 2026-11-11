@@ -8,6 +8,7 @@ interface CompareSchoolsModalProps {
   selectedSchools: School[];
   onRemoveSchool: (id: string) => void;
   onSelectDetailSchool: (school: School) => void;
+  onOpenPdfModal?: (school: School) => void;
 }
 
 export const CompareSchoolsModal: React.FC<CompareSchoolsModalProps> = ({
@@ -15,7 +16,8 @@ export const CompareSchoolsModal: React.FC<CompareSchoolsModalProps> = ({
   onClose,
   selectedSchools,
   onRemoveSchool,
-  onSelectDetailSchool
+  onSelectDetailSchool,
+  onOpenPdfModal
 }) => {
   if (!isOpen) return null;
 
@@ -252,13 +254,24 @@ export const CompareSchoolsModal: React.FC<CompareSchoolsModalProps> = ({
                 <p className="text-[11px] text-slate-400 font-medium">
                   Data bersumber dari BAN-PDM Jawa Timur, Kemendikdasmen, dan Ledger Audit Warga Edu Track.
                 </p>
-                <div className="flex gap-2.5">
+                <div className="flex gap-2.5 flex-wrap">
+                  {onOpenPdfModal && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenPdfModal(schoolA);
+                      }}
+                      className="px-4 py-2 rounded-full text-xs font-bold bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer"
+                    >
+                      📄 PDF {schoolA.name}
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       onSelectDetailSchool(schoolA);
                       onClose();
                     }}
-                    className="px-4 py-2 rounded-full text-xs font-bold bg-indigo-50 text-[#5E5CE6] hover:bg-indigo-100 transition-colors"
+                    className="px-4 py-2 rounded-full text-xs font-bold bg-indigo-50 text-[#5E5CE6] hover:bg-indigo-100 transition-colors cursor-pointer"
                   >
                     Buka Detail {schoolA.name}
                   </button>
@@ -267,7 +280,7 @@ export const CompareSchoolsModal: React.FC<CompareSchoolsModalProps> = ({
                       onSelectDetailSchool(schoolB);
                       onClose();
                     }}
-                    className="px-4 py-2 rounded-full text-xs font-bold bg-[#5E5CE6] text-white hover:bg-[#4B49C8] transition-colors"
+                    className="px-4 py-2 rounded-full text-xs font-bold bg-[#5E5CE6] text-white hover:bg-[#4B49C8] transition-colors cursor-pointer"
                   >
                     Buka Detail {schoolB.name}
                   </button>

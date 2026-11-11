@@ -78,3 +78,42 @@
   border-radius: 28px;
   box-shadow: 0 14px 34px -8px rgba(91, 88, 235, 0.4);
 }
+
+/* Clean A4 Public Audit PDF Print Stylesheet */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #edutrack-printable-audit-sheet,
+  #edutrack-printable-audit-sheet * {
+    visibility: visible;
+  }
+
+  #edutrack-printable-audit-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

@@ -592,3 +592,76 @@ func VerifyCitizenReport(c *fiber.Ctx) error {
 		"report": report,
 	})
 }
+
+// SubmitOfficialResponse records a 2-way feedback response from the school management / committee
+func SubmitOfficialResponse(c *fiber.Ctx) error {
+	reportID := c.Params("id")
+
+	type ResponsePayload struct {
+		FollowUpStatus string `json:"followUpStatus"`
+		ResponderName  string `json:"responderName"`
+		ResponderRole  string `json:"responderRole"`
+		Text           string `json:"text"`
+	}
+
+	var payload ResponsePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid response payload",
+		})
+	}
+
+	nowStamp := time.Now().Format("2006-01-02 15:04") + " WIB"
+
+	if database.DB == nil {
+		if database.LocalStore == nil {
+			database.InitLocalStore()
+		}
+		database.LocalStore.Lock()
+		defer database.LocalStore.Unlock()
+
+		for si := range database.LocalStore.Schools {
+			s := &database.LocalStore.Schools[si]
+			for ri := range s.CitizenReports {
+				r := &s.CitizenReports[ri]
+				if r.ID == reportID {
+					r.FollowUpStatus = payload.FollowUpStatus
+					r.OfficialResponse = &models.OfficialSchoolResponse{
+						ResponderName: payload.ResponderName,
+						ResponderRole: payload.ResponderRole,
+						Text:          payload.Text,
+						RespondedAt:   nowStamp,
+					}
+					database.LocalStore.Save()
+					return c.JSON(fiber.Map{
+						"report": *r,
+					})
+				}
+			}
+		}
+
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Report not found",
+		})
+	}
+
+	var report models.CitizenReportItem
+	if err := database.DB.Where("id = ?", reportID).First(&report).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Report not found",
+		})
+	}
+
+	report.FollowUpStatus = payload.FollowUpStatus
+	report.OfficialResponse = &models.OfficialSchoolResponse{
+		ResponderName: payload.ResponderName,
+		ResponderRole: payload.ResponderRole,
+		Text:          payload.Text,
+		RespondedAt:   nowStamp,
+	}
+	database.DB.Save(&report)
+
+	return c.JSON(fiber.Map{
+		"report": report,
+	})
+}

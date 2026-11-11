@@ -35,6 +35,9 @@ type School struct {
 	NPSN                    string  `gorm:"type:varchar(16);uniqueIndex;not null" json:"npsn"`
 	Name                    string  `gorm:"type:varchar(255);not null" json:"name"`
 	Level                   SchoolLevel `gorm:"type:varchar(8);not null" json:"level"`
+	Provinsi                string  `gorm:"type:varchar(128)" json:"provinsi"`
+	KabupatenKota           string  `gorm:"type:varchar(128)" json:"kabupatenKota"`
+	Kecamatan               string  `gorm:"type:varchar(128)" json:"kecamatan"`
 	District                string  `gorm:"type:varchar(128);not null" json:"district"`
 	City                    string  `gorm:"type:varchar(128);not null" json:"city"`
 	Address                 string  `gorm:"type:text" json:"address"`
@@ -112,20 +115,29 @@ type RadarStandardItem struct {
 	FullMark      float64 `gorm:"default:100" json:"fullMark"`
 }
 
+type OfficialSchoolResponse struct {
+	ResponderName string `gorm:"type:varchar(128)" json:"responderName"`
+	ResponderRole string `gorm:"type:varchar(128)" json:"responderRole"`
+	Text          string `gorm:"type:text" json:"text"`
+	RespondedAt   string `gorm:"type:varchar(64)" json:"respondedAt"`
+}
+
 type CitizenReportItem struct {
-	ID          string    `gorm:"primaryKey;type:varchar(64)" json:"id"`
-	SchoolID    string    `gorm:"type:varchar(64);index;not null" json:"schoolId"`
-	Author      string    `gorm:"type:varchar(128);not null" json:"author"`
-	AuthorRole  string    `gorm:"type:varchar(64);not null" json:"authorRole"`
-	Date        string    `gorm:"type:varchar(32);not null" json:"date"`
-	FacilityTag string    `gorm:"type:varchar(64);not null" json:"facilityTag"`
-	Text        string    `gorm:"type:text;not null" json:"text"`
-	PhotoURL    string    `gorm:"type:text" json:"photoUrl,omitempty"`
-	Upvotes     int       `gorm:"default:1" json:"upvotes"`
-	Status      string    `gorm:"type:varchar(32);default:'investigating'" json:"status"` // verified, investigating, countered
-	VerifiedBy  string    `gorm:"type:varchar(128)" json:"verifiedBy,omitempty"`
-	VerifiedAt  string    `gorm:"type:varchar(64)" json:"verifiedAt,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID               string                  `gorm:"primaryKey;type:varchar(64)" json:"id"`
+	SchoolID         string                  `gorm:"type:varchar(64);index;not null" json:"schoolId"`
+	Author           string                  `gorm:"type:varchar(128);not null" json:"author"`
+	AuthorRole       string                  `gorm:"type:varchar(64);not null" json:"authorRole"`
+	Date             string                  `gorm:"type:varchar(32);not null" json:"date"`
+	FacilityTag      string                  `gorm:"type:varchar(64);not null" json:"facilityTag"`
+	Text             string                  `gorm:"type:text;not null" json:"text"`
+	PhotoURL         string                  `gorm:"type:text" json:"photoUrl,omitempty"`
+	Upvotes          int                     `gorm:"default:1" json:"upvotes"`
+	Status           string                  `gorm:"type:varchar(32);default:'investigating'" json:"status"` // verified, investigating, countered
+	VerifiedBy       string                  `gorm:"type:varchar(128)" json:"verifiedBy,omitempty"`
+	VerifiedAt       string                  `gorm:"type:varchar(64)" json:"verifiedAt,omitempty"`
+	FollowUpStatus   string                  `gorm:"type:varchar(32);default:'waiting_response'" json:"followUpStatus,omitempty"`
+	OfficialResponse *OfficialSchoolResponse `gorm:"embedded;embeddedPrefix:resp_" json:"officialResponse,omitempty"`
+	CreatedAt        time.Time               `json:"createdAt"`
 }
 
 type TransparencyStats struct {

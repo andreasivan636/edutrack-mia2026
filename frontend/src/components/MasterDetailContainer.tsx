@@ -14,11 +14,15 @@ import {
   FileText,
   Building2,
   Calendar,
-  Clock
+  Clock,
+  MessageSquare,
+  ThumbsDown,
+  Send
 } from 'lucide-react';
 import { School } from '../types/school';
 import { SlaStepper } from './SlaStepper';
 import { RadarStandardsChart } from './RadarStandardsChart';
+import { RegionalFilterState } from './GranularRegionalDrillDownBar';
 
 interface MasterDetailContainerProps {
   schools: School[];
@@ -26,6 +30,18 @@ interface MasterDetailContainerProps {
   onSelectSchool: (school: School) => void;
   onOpenReportModal: (defaultSchoolId?: string) => void;
   onUpvoteReport: (schoolId: string, reportId: string) => void;
+  onOpenPdfModal?: (school: School) => void;
+  onVoteSatisfaction?: (
+    schoolId: string,
+    reportId: string,
+    voteType: 'satisfied' | 'unsatisfied'
+  ) => void;
+  onAddPublicComment?: (
+    schoolId: string,
+    reportId: string,
+    payload: { author: string; role: string; text: string }
+  ) => void;
+  regionalFilter?: RegionalFilterState;
   compareList: School[];
   onToggleCompare: (school: School) => void;
   onOpenCompareModal: () => void;
@@ -53,6 +69,10 @@ export const MasterDetailContainer: React.FC<MasterDetailContainerProps> = ({
   onSelectSchool,
   onOpenReportModal,
   onUpvoteReport,
+  onOpenPdfModal,
+  onVoteSatisfaction,
+  onAddPublicComment,
+  regionalFilter,
   compareList,
   onToggleCompare,
   onOpenCompareModal,
@@ -62,6 +82,12 @@ export const MasterDetailContainer: React.FC<MasterDetailContainerProps> = ({
   // Master Container Tab Notch State
   const [activeTabNotch, setActiveTabNotch] = useState<'all' | 'overdue' | 'anomaly'>('all');
 
+  // Two-Way Feedback Comment Input State (per reportId)
+  const [openCommentReportId, setOpenCommentReportId] = useState<string | null>(null);
+  const [commentAuthor, setCommentAuthor] = useState('');
+  const [commentRole, setCommentRole] = useState('Wali Murid');
+  const [commentText, setCommentText] = useState('');
+
   // Pagination State (5 schools per page)
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -69,6 +95,17 @@ export const MasterDetailContainer: React.FC<MasterDetailContainerProps> = ({
   // Filtered Schools Logic
   const filteredSchools = useMemo(() => {
     return schools.filter((school) => {
+      // Granular Regional Hierarchy Filter
+      if (regionalFilter) {
+        const prov = school.provinsi || 'Jawa Timur';
+        const kab = school.kabupatenKota || school.city;
+        const kec = school.kecamatan || school.district;
+        if (regionalFilter.provinsi !== 'ALL' && prov !== regionalFilter.provinsi) return false;
+        if (regionalFilter.kabupatenKota !== 'ALL' && kab !== regionalFilter.kabupatenKota)
+          return false;
+        if (regionalFilter.kecamatan !== 'ALL' && kec !== regionalFilter.kecamatan) return false;
+      }
+
       // Tab Notch Filter
       if (activeTabNotch === 'overdue' && school.slaStatus !== 'overdue') return false;
       if (activeTabNotch === 'anomaly' && school.aiRiskLevel !== 'high_discrepancy') return false;
@@ -486,17 +523,31 @@ export const MasterDetailContainer: React.FC<MasterDetailContainerProps> = ({
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => onToggleCompare(selectedSchool)}
-                      className={`p-2.5 rounded-2xl border transition-all ${
-                        isCompared(selectedSchool.id)
-                          ? 'bg-white text-slate-900 border-white shadow-md'
-                          : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-                      }`}
-                      title="Bandingkan sekolah ini"
-                    >
-                      <Scale className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {onOpenPdfModal && (
+                        <button
+                          onClick={() => onOpenPdfModal(selectedSchool)}
+                          className="px-3.5 py-2.5 rounded-2xl bg-white text-[#5B58EB] hover:bg-indigo-50 text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Unduh / Cetak Ringkasan Audit Publik (PDF)"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="hidden sm:inline">📄 Unduh Laporan Audit Publik (PDF)</span>
+                          <span className="sm:hidden">PDF</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => onToggleCompare(selectedSchool)}
+                        className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                          isCompared(selectedSchool.id)
+                            ? 'bg-white text-slate-900 border-white shadow-md'
+                            : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                        }`}
+                        title="Bandingkan sekolah ini"
+                      >
+                        <Scale className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* 2. 3 Sub-Kotak Metrik Transparan (bg-white/15 persis FINNOVA) */}
@@ -607,94 +658,252 @@ export const MasterDetailContainer: React.FC<MasterDetailContainerProps> = ({
                     />
                   </div>
 
-                  {/* Crowdsourced Reality Check Ledger */}
-                  <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-5 space-y-3">
-                    <div className="flex items-center justify-between">
+                  {/* Crowdsourced Reality Check Ledger & Two-Way Citizen Feedback Loop */}
+                  <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-                          <Camera className="w-4 h-4 text-emerald-300" />
-                          <span>Ledger Bukti Fisik Warga ({selectedSchool.citizenReports.length})</span>
+                          <MessageSquare className="w-4 h-4 text-emerald-300" />
+                          <span>
+                            💬 Kanal Umpan Balik & Tanggapan Resmi (2-Way Feedback Loop —{' '}
+                            {selectedSchool.citizenReports.length})
+                          </span>
                         </h4>
                         <p className="text-[11px] text-white/80">
-                          Audit partisipatif tervalidasi AI Vision
+                          Akuntabilitas dua arah antara laporan bukti warga, respons resmi Kepala Sekolah/Komite, & evaluasi kepuasan publik
                         </p>
                       </div>
                     </div>
 
-                    {/* Citizen Reports List */}
-                    <div className="space-y-2.5 pt-1">
-                      {selectedSchool.citizenReports.map((report) => (
-                        <div
-                          key={report.id}
-                          className="p-3.5 rounded-xl bg-black/20 border border-white/10 space-y-2 text-white"
-                        >
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white">
-                                {report.author}
-                              </span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-medium">
-                                {report.authorRole}
-                              </span>
+                    {/* Citizen Reports & 2-Way Feedback List */}
+                    <div className="space-y-3.5 pt-1">
+                      {selectedSchool.citizenReports.map((report) => {
+                        const followUp = report.followUpStatus || 'waiting_response';
+                        const votes = report.satisfactionVotes || { satisfied: 0, unsatisfied: 0 };
+                        const comments = report.publicComments || [];
+                        const isCommentBoxOpen = openCommentReportId === report.id;
+
+                        return (
+                          <div
+                            key={report.id}
+                            className="p-4 rounded-2xl bg-black/25 border border-white/15 space-y-3 text-white"
+                          >
+                            {/* Header: Reporter & Follow-up Status */}
+                            <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-white">{report.author}</span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-medium">
+                                  {report.authorRole}
+                                </span>
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white text-[#5B58EB]">
+                                  Fasilitas: {report.facilityTag}
+                                </span>
+                              </div>
+
+                              {/* Status Tindak Lanjut Sekolah Badge */}
+                              <div className="flex items-center gap-2">
+                                {followUp === 'resolved' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-400/20 text-emerald-200 border border-emerald-300/40">
+                                    ✓ Selesai Ditindaklanjuti
+                                  </span>
+                                ) : followUp === 'in_progress_school' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400/20 text-amber-200 border border-amber-300/40">
+                                    🔧 Sedang Diperbaiki oleh Sekolah
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-white/15 text-white/90 border border-white/25">
+                                    ⏳ Menunggu Respons Sekolah
+                                  </span>
+                                )}
+                                <span className="text-[10px] tabular-nums text-white/70">
+                                  {report.date}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[10px] tabular-nums text-white/70">
-                              {report.date}
-                            </span>
-                          </div>
 
-                          <div className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white text-[#5B58EB]">
-                            Fasilitas: {report.facilityTag}
-                          </div>
+                            {/* Citizen Report Text */}
+                            <p className="text-xs text-white/95 leading-relaxed">{report.text}</p>
 
-                          <p className="text-xs text-white/90 leading-relaxed">
-                            {report.text}
-                          </p>
-
-                          {report.photoUrl && (
-                            <div className="rounded-xl overflow-hidden border border-white/20 max-h-36">
-                              <img
-                                src={report.photoUrl}
-                                alt="Bukti Lapangan"
-                                className="w-full h-36 object-cover hover:scale-105 transition-transform"
-                              />
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-1 border-t border-white/10 text-xs">
-                            {report.status === 'verified' ? (
-                              <span className="text-[10px] text-emerald-300 flex items-center gap-1 font-semibold">
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                <span>Terverifikasi Asesor & Geotag</span>
-                              </span>
-                            ) : report.status === 'investigating' ? (
-                              <span className="text-[10px] text-amber-300 flex items-center gap-1 font-semibold">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>Menunggu Moderasi Asesor</span>
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-rose-300 flex items-center gap-1 font-semibold">
-                                <span>✕ Ditolak Moderator (Hoaks/Tidak Valid)</span>
-                              </span>
+                            {report.photoUrl && (
+                              <div className="rounded-xl overflow-hidden border border-white/20 max-h-36">
+                                <img
+                                  src={report.photoUrl}
+                                  alt="Bukti Lapangan"
+                                  className="w-full h-36 object-cover hover:scale-105 transition-transform"
+                                />
+                              </div>
                             )}
 
-                            <button
-                              onClick={() => onUpvoteReport(selectedSchool.id, report.id)}
-                              className="flex items-center gap-1 text-[11px] tabular-nums text-white/80 hover:text-white transition-colors"
-                            >
-                              <ThumbsUp className="w-3.5 h-3.5" />
-                              <span>Dukung Temuan ({report.upvotes})</span>
-                            </button>
+                            {/* Kotak Balasan Resmi Kepala Sekolah / Komite Sekolah */}
+                            {report.officialResponse ? (
+                              <div className="p-3.5 rounded-xl bg-white/15 border-l-4 border-emerald-300 space-y-1">
+                                <div className="flex items-center justify-between flex-wrap gap-1 text-[11px]">
+                                  <span className="font-extrabold text-emerald-200 flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>
+                                      Tanggapan Resmi Institusi: {report.officialResponse.responderName} ({report.officialResponse.responderRole})
+                                    </span>
+                                  </span>
+                                  <span className="text-[10px] text-white/70 tabular-nums">
+                                    {report.officialResponse.respondedAt}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-white leading-relaxed italic">
+                                  "{report.officialResponse.text}"
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-[11px] text-amber-200 flex items-center justify-between gap-2">
+                                <span>
+                                  Belum ada balasan resmi institusi. Pihak Sekolah / Admin dapat merespons melalui Portal Moderasi.
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Public Follow-Up Comments Thread */}
+                            {comments.length > 0 && (
+                              <div className="space-y-1.5 pl-3 border-l-2 border-white/20">
+                                {comments.map((cmt) => (
+                                  <div
+                                    key={cmt.id}
+                                    className="p-2.5 rounded-xl bg-black/20 text-[11px] space-y-0.5"
+                                  >
+                                    <div className="flex items-center justify-between text-white/80">
+                                      <span className="font-bold text-white">
+                                        {cmt.author}{' '}
+                                        <span className="text-[10px] font-normal text-white/70">
+                                          ({cmt.role})
+                                        </span>
+                                      </span>
+                                      <span className="text-[10px] tabular-nums">{cmt.date}</span>
+                                    </div>
+                                    <p className="text-white/90">{cmt.text}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Interactive 2-Way Satisfaction Voting & Comment Trigger */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/15 text-xs">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                  onClick={() =>
+                                    onVoteSatisfaction &&
+                                    onVoteSatisfaction(selectedSchool.id, report.id, 'satisfied')
+                                  }
+                                  className="px-2.5 py-1 rounded-full bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-300/30 text-[11px] font-bold text-emerald-100 transition-colors flex items-center gap-1 cursor-pointer tabular-nums"
+                                >
+                                  <ThumbsUp className="w-3 h-3" />
+                                  <span>👍 Respons Memuaskan ({votes.satisfied})</span>
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    onVoteSatisfaction &&
+                                    onVoteSatisfaction(selectedSchool.id, report.id, 'unsatisfied')
+                                  }
+                                  className="px-2.5 py-1 rounded-full bg-rose-500/25 hover:bg-rose-500/40 border border-rose-300/30 text-[11px] font-bold text-rose-100 transition-colors flex items-center gap-1 cursor-pointer tabular-nums"
+                                >
+                                  <ThumbsDown className="w-3 h-3" />
+                                  <span>👎 Belum Terbukti di Lapangan ({votes.unsatisfied})</span>
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() =>
+                                    setOpenCommentReportId(isCommentBoxOpen ? null : report.id)
+                                  }
+                                  className="text-[11px] font-bold text-indigo-200 hover:text-white underline cursor-pointer"
+                                >
+                                  {isCommentBoxOpen ? 'Tutup Form' : '+ Tanggapi / Komentar Warga'}
+                                </button>
+
+                                <button
+                                  onClick={() => onUpvoteReport(selectedSchool.id, report.id)}
+                                  className="flex items-center gap-1 text-[11px] tabular-nums text-white/80 hover:text-white transition-colors cursor-pointer"
+                                >
+                                  <ThumbsUp className="w-3.5 h-3.5" />
+                                  <span>Dukung ({report.upvotes})</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Inline Add Citizen Follow-Up Comment Form */}
+                            {isCommentBoxOpen && (
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  if (!commentText.trim() || !onAddPublicComment) return;
+                                  onAddPublicComment(selectedSchool.id, report.id, {
+                                    author: commentAuthor.trim() || 'Wali Murid Terverifikasi',
+                                    role: commentRole,
+                                    text: commentText.trim()
+                                  });
+                                  setCommentText('');
+                                  setOpenCommentReportId(null);
+                                }}
+                                className="p-3 rounded-xl bg-black/30 border border-white/20 space-y-2.5"
+                              >
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <input
+                                    type="text"
+                                    value={commentAuthor}
+                                    onChange={(e) => setCommentAuthor(e.target.value)}
+                                    placeholder="Nama Anda (Contoh: Hendra - Wali Murid)"
+                                    className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs text-white placeholder-white/50 focus:outline-none focus:border-white"
+                                  />
+                                  <select
+                                    value={commentRole}
+                                    onChange={(e) => setCommentRole(e.target.value)}
+                                    className="px-3 py-1.5 rounded-lg bg-slate-900 border border-white/20 text-xs text-white focus:outline-none"
+                                  >
+                                    <option value="Wali Murid">Wali Murid</option>
+                                    <option value="Siswa">Siswa</option>
+                                    <option value="Komite Sekolah">Komite Sekolah</option>
+                                    <option value="Warga Sekitar">Warga Sekitar</option>
+                                  </select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    required
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    placeholder="Tulis konfirmasi kondisi riil terbaru di lapangan..."
+                                    className="flex-1 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs text-white placeholder-white/50 focus:outline-none focus:border-white"
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="px-3.5 py-1.5 rounded-lg bg-white text-[#5B58EB] font-extrabold text-xs flex items-center gap-1 hover:bg-indigo-50 cursor-pointer"
+                                  >
+                                    <Send className="w-3 h-3" />
+                                    <span>Kirim</span>
+                                  </button>
+                                </div>
+                              </form>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* Tombol Putih Bersih di Pojok Kanan Bawah (Persis FINNOVA) */}
-                  <div className="flex justify-end pt-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    {onOpenPdfModal && (
+                      <button
+                        onClick={() => onOpenPdfModal(selectedSchool)}
+                        className="bg-white/15 hover:bg-white/25 text-white border border-white/30 rounded-full px-5 py-3 font-bold text-xs transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4 text-emerald-300" />
+                        <span>📄 Unduh Laporan Audit Publik (PDF)</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() => onOpenReportModal(selectedSchool.id)}
-                      className="bg-white text-slate-900 hover:bg-slate-100 rounded-full px-6 py-3 font-bold text-xs shadow-md shadow-black/10 transition-colors flex items-center gap-2"
+                      className="bg-white text-slate-900 hover:bg-slate-100 rounded-full px-6 py-3 font-bold text-xs shadow-md shadow-black/10 transition-colors flex items-center gap-2 cursor-pointer ml-auto"
                     >
                       <Camera className="w-4 h-4 text-[#5E5CE6]" />
                       <span>+ Kirim Bukti Lapangan</span>

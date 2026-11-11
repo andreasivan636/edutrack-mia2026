@@ -76,6 +76,7 @@ func main() {
 	api.Put("/schools/:id/sla", handlers.UpdateSchoolSLA)
 	api.Post("/schools/:id/reports", handlers.CreateCitizenReport)
 	api.Put("/reports/:id/verify", handlers.VerifyCitizenReport)
+	api.Put("/reports/:id/response", handlers.SubmitOfficialResponse)
 	api.Get("/stats", handlers.GetTransparencyStats)
 
 	// 7. Start Server

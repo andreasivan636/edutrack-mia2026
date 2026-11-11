@@ -9,13 +9,19 @@ import { CompareSchoolsModal } from './components/CompareSchoolsModal';
 import { AuthLoginModal } from './components/AuthLoginModal';
 import { AddSchoolModal } from './components/AddSchoolModal';
 import { AdminModerationPanel } from './components/AdminModerationPanel';
+import {
+  GranularRegionalDrillDownBar,
+  RegionalFilterState
+} from './components/GranularRegionalDrillDownBar';
+import { PublicAuditPdfModal } from './components/PublicAuditPdfModal';
 import { apiService } from './services/api';
 import {
   School,
   TransparencyStats,
   AuthUser,
   CreateSchoolPayload,
-  UpdateSlaPayload
+  UpdateSlaPayload,
+  FollowUpStatus
 } from './types/school';
 import { Database, Scale, CheckCircle2 } from 'lucide-react';
 
@@ -34,9 +40,17 @@ export function App() {
   // Public Modals State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  const [pdfModalSchool, setPdfModalSchool] = useState<School | null>(null);
   const [defaultReportSchoolId, setDefaultReportSchoolId] = useState<string | undefined>(undefined);
   const [isOfflineFallback, setIsOfflineFallback] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Granular 5-Level Regional Drill-Down Filter State
+  const [regionalFilter, setRegionalFilter] = useState<RegionalFilterState>({
+    provinsi: 'ALL',
+    kabupatenKota: 'ALL',
+    kecamatan: 'ALL'
+  });
 
   // Filters State
   const [filters, setFilters] = useState<{
@@ -248,6 +262,62 @@ export function App() {
     }
   };
 
+  // 2b. Admin / School Submits Official Institution Response (2-Way Feedback Loop)
+  const handleSubmitOfficialResponse = async (
+    schoolId: string,
+    reportId: string,
+    payload: {
+      followUpStatus: FollowUpStatus;
+      responderName: string;
+      responderRole: string;
+      text: string;
+    }
+  ) => {
+    const res = await apiService.submitOfficialSchoolResponse(schoolId, reportId, payload);
+    const refreshedSchools = await apiService.getSchools();
+    setSchools([...refreshedSchools.data]);
+    if (res.school && selectedSchool?.id === res.school.id) {
+      setSelectedSchool(res.school);
+    }
+    showToast(
+      `Tanggapan resmi institusi (${payload.responderName}) berhasil dipublikasikan ke kanal umpan balik warga!`
+    );
+  };
+
+  // 2c. Citizen Votes Satisfaction on School Follow-Up (2-Way Feedback Loop)
+  const handleVoteSatisfaction = async (
+    schoolId: string,
+    reportId: string,
+    voteType: 'satisfied' | 'unsatisfied'
+  ) => {
+    const updated = await apiService.voteReportSatisfaction(schoolId, reportId, voteType);
+    const refreshedSchools = await apiService.getSchools();
+    setSchools([...refreshedSchools.data]);
+    if (updated && selectedSchool?.id === updated.id) {
+      setSelectedSchool(updated);
+    }
+    showToast(
+      voteType === 'satisfied'
+        ? 'Terima kasih! Evaluasi "Respons Memuaskan" Anda telah tercatat di Ledger Publik.'
+        : 'Catatan "Belum Terbukti di Lapangan" telah dikirim sebagai peringatan ke Asesor BAN-PDM.'
+    );
+  };
+
+  // 2d. Citizen Adds Follow-Up Comment on Report Thread
+  const handleAddPublicComment = async (
+    schoolId: string,
+    reportId: string,
+    payload: { author: string; role: string; text: string }
+  ) => {
+    const updated = await apiService.addReportPublicComment(schoolId, reportId, payload);
+    const refreshedSchools = await apiService.getSchools();
+    setSchools([...refreshedSchools.data]);
+    if (updated && selectedSchool?.id === updated.id) {
+      setSelectedSchool(updated);
+    }
+    showToast('Komentar aspirasi tindak lanjut warga berhasil ditambahkan!');
+  };
+
   // 3. Admin Updates School SLA Stage & Status
   const handleUpdateSla = async (schoolId: string, payload: UpdateSlaPayload) => {
     const res = await apiService.updateSchoolSla(schoolId, payload);
@@ -393,6 +463,7 @@ export function App() {
             stats={stats}
             isOfflineFallback={isOfflineFallback}
             onVerifyReport={handleVerifyReport}
+            onSubmitOfficialResponse={handleSubmitOfficialResponse}
             onUpdateSla={handleUpdateSla}
             onOpenAddSchoolModal={() => setIsAddSchoolModalOpen(true)}
             onSyncDapodik={handleSyncDapodik}
@@ -432,14 +503,26 @@ export function App() {
               <AnalyticsChartsSection />
             </section>
 
-            {/* Baris 3: Active Filter Bar & Master-Detail Container (Signature FINNOVA Look) */}
-            <section ref={trackerRef} aria-label="Master-Detail Tracker Sekolah">
+            {/* Baris 3: Granular Regional Drill-Down Bar & Master-Detail Container */}
+            <section ref={trackerRef} aria-label="Master-Detail Tracker Sekolah" className="space-y-6">
+              <GranularRegionalDrillDownBar
+                schools={schools}
+                selectedSchool={selectedSchool}
+                onSelectSchool={(s) => setSelectedSchool(s)}
+                regionalFilter={regionalFilter}
+                onChangeRegionalFilter={setRegionalFilter}
+              />
+
               <MasterDetailContainer
                 schools={schools}
                 selectedSchool={selectedSchool}
                 onSelectSchool={(s) => setSelectedSchool(s)}
                 onOpenReportModal={handleOpenReportModal}
                 onUpvoteReport={handleUpvoteReport}
+                onOpenPdfModal={(s) => setPdfModalSchool(s)}
+                onVoteSatisfaction={handleVoteSatisfaction}
+                onAddPublicComment={handleAddPublicComment}
+                regionalFilter={regionalFilter}
                 compareList={compareList}
                 onToggleCompare={handleToggleCompare}
                 onOpenCompareModal={() => setIsCompareModalOpen(true)}
@@ -500,6 +583,7 @@ export function App() {
         onClose={() => setIsCompareModalOpen(false)}
         selectedSchools={compareList}
         onRemoveSchool={(id) => setCompareList(compareList.filter((s) => s.id !== id))}
+        onOpenPdfModal={(s) => setPdfModalSchool(s)}
         onSelectDetailSchool={(s) => {
           setSelectedSchool(s);
           setActiveTab('tracker');
@@ -509,6 +593,12 @@ export function App() {
             }
           }, 80);
         }}
+      />
+
+      <PublicAuditPdfModal
+        isOpen={Boolean(pdfModalSchool)}
+        onClose={() => setPdfModalSchool(null)}
+        school={pdfModalSchool}
       />
 
       {/* Executive Clean Light Footer */}

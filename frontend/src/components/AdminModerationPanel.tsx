@@ -15,7 +15,9 @@ import {
   Calendar,
   Building2,
   FileCheck2,
-  Save
+  Save,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import {
   School,
@@ -23,7 +25,8 @@ import {
   AuthUser,
   SlaStatus,
   UpdateSlaPayload,
-  CitizenReportItem
+  CitizenReportItem,
+  FollowUpStatus
 } from '../types/school';
 
 interface AdminModerationPanelProps {
@@ -32,6 +35,16 @@ interface AdminModerationPanelProps {
   stats: TransparencyStats;
   isOfflineFallback: boolean;
   onVerifyReport: (reportId: string, status: 'verified' | 'countered') => Promise<void>;
+  onSubmitOfficialResponse: (
+    schoolId: string,
+    reportId: string,
+    payload: {
+      followUpStatus: FollowUpStatus;
+      responderName: string;
+      responderRole: string;
+      text: string;
+    }
+  ) => Promise<void>;
   onUpdateSla: (schoolId: string, payload: UpdateSlaPayload) => Promise<void>;
   onOpenAddSchoolModal: () => void;
   onSyncDapodik: () => Promise<{ addedSchools: School[]; syncedAt: string }>;
@@ -54,15 +67,21 @@ export const AdminModerationPanel: React.FC<AdminModerationPanelProps> = ({
   stats,
   isOfflineFallback,
   onVerifyReport,
+  onSubmitOfficialResponse,
   onUpdateSla,
   onOpenAddSchoolModal,
   onSyncDapodik,
   onResetDemoData,
   onNavigateToPublicSchool
 }) => {
-  // Sub-Module 1 State (Report Moderation Inbox)
+  // Sub-Module 1 State (Report Moderation Inbox & Two-Way Official Response)
   const [reportFilter, setReportFilter] = useState<'all' | 'investigating' | 'verified' | 'countered'>('all');
   const [processingReportId, setProcessingReportId] = useState<string | null>(null);
+  const [replyingReportId, setReplyingReportId] = useState<string | null>(null);
+  const [replyFollowUpStatus, setReplyFollowUpStatus] = useState<FollowUpStatus>('in_progress_school');
+  const [replyResponderName, setReplyResponderName] = useState('');
+  const [replyResponderRole, setReplyResponderRole] = useState('Kepala Sekolah & Tim BOS');
+  const [replyText, setReplyText] = useState('');
 
   // Sub-Module 2 State (SLA Stage Updater)
   const [slaSearch, setSlaSearch] = useState('');
@@ -583,6 +602,28 @@ export const AdminModerationPanel: React.FC<AdminModerationPanelProps> = ({
                         "{report.text}"
                       </p>
 
+                      {/* Existing Official School Response Preview */}
+                      {report.officialResponse && (
+                        <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200/80 text-xs space-y-1">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="font-extrabold text-[#5E5CE6] flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>
+                                Tanggapan Resmi Institusi ({report.officialResponse.responderName}):
+                              </span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-700 border border-indigo-200">
+                              {report.followUpStatus === 'resolved'
+                                ? '✓ Selesai Ditindaklanjuti'
+                                : report.followUpStatus === 'in_progress_school'
+                                ? '🔧 Sedang Diperbaiki oleh Sekolah'
+                                : '⏳ Menunggu Respons Sekolah'}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 italic">"{report.officialResponse.text}"</p>
+                        </div>
+                      )}
+
                       {/* Reporter Metadata */}
                       <div className="flex items-center gap-3 flex-wrap text-[11px] text-slate-500">
                         <span className="font-bold text-slate-700">{report.author}</span>
@@ -598,11 +639,150 @@ export const AdminModerationPanel: React.FC<AdminModerationPanelProps> = ({
                           </span>
                         )}
                       </div>
+
+                      {/* Inline Official Institution Response Editor */}
+                      {replyingReportId === report.id && (
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!replyText.trim()) return;
+                            await onSubmitOfficialResponse(report.schoolId, report.id, {
+                              followUpStatus: replyFollowUpStatus,
+                              responderName:
+                                replyResponderName.trim() || `Kepala ${report.schoolName}`,
+                              responderRole: replyResponderRole.trim() || 'Kepala Sekolah & Tim BOS',
+                              text: replyText.trim()
+                            });
+                            setReplyingReportId(null);
+                            setReplyText('');
+                          }}
+                          className="mt-3 p-4 rounded-2xl bg-slate-50 border border-indigo-200 space-y-3"
+                        >
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-[#5E5CE6]" />
+                              <span>Tulis Tanggapan Resmi Institusi (2-Way Feedback Loop)</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplyFollowUpStatus('in_progress_school');
+                                setReplyResponderName(`Kepala ${report.schoolName}`);
+                                setReplyResponderRole('Kepala Sekolah & Komite BOS');
+                                setReplyText(
+                                  `Terima kasih atas laporannya, perbaikan fasilitas ${report.facilityTag} pada ${report.schoolName} telah dianggarkan pada pencairan Dana BOS Tahap II minggu ini dan sedang dalam pengerjaan teknis.`
+                                );
+                              }}
+                              className="text-[11px] font-bold text-[#5E5CE6] hover:underline cursor-pointer"
+                            >
+                              ⚡ Gunakan Template Tanggapan Cepat
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                Status Tindak Lanjut Sekolah
+                              </label>
+                              <select
+                                value={replyFollowUpStatus}
+                                onChange={(e) =>
+                                  setReplyFollowUpStatus(e.target.value as FollowUpStatus)
+                                }
+                                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900"
+                              >
+                                <option value="waiting_response">Menunggu Respons Sekolah</option>
+                                <option value="in_progress_school">
+                                  Sedang Diperbaiki oleh Sekolah
+                                </option>
+                                <option value="resolved">Selesai Ditindaklanjuti</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                Pejabat Penanggap
+                              </label>
+                              <input
+                                type="text"
+                                value={replyResponderName}
+                                onChange={(e) => setReplyResponderName(e.target.value)}
+                                placeholder={`Kepala ${report.schoolName}`}
+                                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                Jabatan / Unit
+                              </label>
+                              <input
+                                type="text"
+                                value={replyResponderRole}
+                                onChange={(e) => setReplyResponderRole(e.target.value)}
+                                placeholder="Kepala Sekolah / Komite BOS"
+                                className="w-full px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900"
+                              />
+                            </div>
+                          </div>
+
+                          <textarea
+                            rows={2}
+                            required
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Tulis tanggapan resmi dan langkah tindak lanjut pihak sekolah..."
+                            className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-[#5E5CE6]"
+                          />
+
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setReplyingReportId(null)}
+                              className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-200/60"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#5E5CE6] hover:bg-[#4B49C8] text-white flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Publikasikan Tanggapan Resmi</span>
+                            </button>
+                          </div>
+                        </form>
+                      )}
                     </div>
                   </div>
 
                   {/* Right Moderation Buttons */}
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (replyingReportId === report.id) {
+                          setReplyingReportId(null);
+                        } else {
+                          setReplyingReportId(report.id);
+                          setReplyFollowUpStatus(
+                            report.followUpStatus && report.followUpStatus !== 'waiting_response'
+                              ? report.followUpStatus
+                              : 'in_progress_school'
+                          );
+                          setReplyResponderName(
+                            report.officialResponse?.responderName || `Kepala ${report.schoolName}`
+                          );
+                          setReplyResponderRole(
+                            report.officialResponse?.responderRole || 'Kepala Sekolah & Tim BOS'
+                          );
+                          setReplyText(report.officialResponse?.text || '');
+                        }
+                      }}
+                      className="px-3.5 py-2 rounded-full text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-[#5E5CE6] border border-indigo-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Tanggapan Resmi Institusi</span>
+                    </button>
+
                     <button
                       disabled={isBusy || isVerified}
                       onClick={() => handleModerationClick(report.id, 'verified')}

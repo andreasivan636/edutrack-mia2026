@@ -18,6 +18,9 @@ export const mockSchools: School[] = [
     npsn: '20532185',
     name: 'SMAN 5 Surabaya',
     level: 'SMA',
+    provinsi: 'Jawa Timur',
+    kabupatenKota: 'Kota Surabaya',
+    kecamatan: 'Genteng',
     district: 'Genteng',
     city: 'Kota Surabaya',
     address: 'Jl. Kusuma Bangsa No.21, Ketabang, Kec. Genteng, Surabaya',
@@ -121,7 +124,24 @@ export const mockSchools: School[] = [
         facilityTag: 'Lab Komputer',
         text: 'Lab Komputer A & B sangat representatif. 40 unit PC terbaru terinstalasi lengkap, AC menyala dingin, dan koneksi internet stabil saat anak saya simulasi TKA.',
         upvotes: 42,
-        status: 'verified'
+        status: 'verified',
+        followUpStatus: 'resolved',
+        officialResponse: {
+          responderName: 'Drs. H. Sukirin Wikdjojo, M.Pd',
+          responderRole: 'Kepala SMAN 5 Surabaya',
+          text: 'Terima kasih atas apresiasi Ibu Dewi. Peremajaan 40 PC dan instalasi jaringan serat optik Lab A & B telah diselesaikan menggunakan Dana BOS Kinerja 2026 dan diaudit bersama Komite Sekolah.',
+          respondedAt: '2026-10-26 10:15 WIB'
+        },
+        satisfactionVotes: { satisfied: 39, unsatisfied: 1 },
+        publicComments: [
+          {
+            id: 'cmt-001',
+            author: 'Ir. Hendra Wijaya',
+            role: 'Komite Sekolah',
+            text: 'Kami telah meninjau langsung berita acara serah terima barang (BASTB) pengadaan PC dan seluruh nomor seri sesuai fisik.',
+            date: '2026-10-27'
+          }
+        ]
       },
       {
         id: 'rep-002',
@@ -131,7 +151,15 @@ export const mockSchools: School[] = [
         facilityTag: 'Transparansi Dana',
         text: 'Laporan realisasi dana BOS dipajang transparan di papan pengumuman lobi utama dan diunggah di situs web sekolah setiap triwulan.',
         upvotes: 38,
-        status: 'verified'
+        status: 'verified',
+        followUpStatus: 'resolved',
+        officialResponse: {
+          responderName: 'Tim Manajemen BOS SMAN 5 Surabaya',
+          responderRole: 'Bendahara & Humas Sekolah',
+          text: 'Terima kasih Bapak Rahmat. Publikasi RKAS dan LPJ BOS Triwulan III 2026 juga dapat diunduh langsung melalui QR Code di lobi sekolah.',
+          respondedAt: '2026-10-21 14:00 WIB'
+        },
+        satisfactionVotes: { satisfied: 35, unsatisfied: 0 }
       },
       {
         id: 'rep-003',
@@ -141,7 +169,15 @@ export const mockSchools: School[] = [
         facilityTag: 'Sanitasi',
         text: 'Toilet siswa bersih, selalu tersedia sabun cair dan air mengalir deras. Tidak ada bau menyengat.',
         upvotes: 29,
-        status: 'verified'
+        status: 'verified',
+        followUpStatus: 'resolved',
+        officialResponse: {
+          responderName: 'Waka Sarana & Prasarana',
+          responderRole: 'Manajemen Sekolah',
+          text: 'Terima kasih masukannya. Petugas kebersihan melakukan inspeksi sanitasi setiap 2 jam sekali sesuai SOP Sekolah Sehat.',
+          respondedAt: '2026-10-16 09:00 WIB'
+        },
+        satisfactionVotes: { satisfied: 28, unsatisfied: 1 }
       }
     ],
     scheduledVisitationDate: '2026-11-03',
@@ -801,7 +837,18 @@ export const mockSchools: School[] = [
         text: 'Temuan pagi ini: 12 unit UPS pada rak server Lab Komputer B dalam kondisi mati total dan berdebu tebal, tidak sesuai kuitansi pengadaan BOS tahap II.',
         photoUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80',
         upvotes: 28,
-        status: 'investigating'
+        status: 'investigating',
+        followUpStatus: 'waiting_response',
+        satisfactionVotes: { satisfied: 2, unsatisfied: 24 },
+        publicComments: [
+          {
+            id: 'cmt-waru-01',
+            author: 'Doni Kurniawan',
+            role: 'Wali Murid Kelas XI',
+            text: 'Betul Pak Arif, minggu lalu anak saya praktikum TIK listriknya sempat jeglek karena UPS tidak berfungsi.',
+            date: '2026-10-31'
+          }
+        ]
       },
       {
         id: 'rep-012',
@@ -812,7 +859,24 @@ export const mockSchools: School[] = [
         text: 'Sekolah mengklaim lab komputer modern siap pakai untuk ujian, tapi kenyataannya dari 40 komputer di Lab 2, hanya 8 yang menyala. Keyboard banyak yang tombolnya copot dan atap di pojok kiri bocor emberan setiap hujan deras.',
         photoUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80',
         upvotes: 114,
-        status: 'verified'
+        status: 'verified',
+        followUpStatus: 'in_progress_school',
+        officialResponse: {
+          responderName: 'Plt. Kepala SMAN X Waru',
+          responderRole: 'Pihak Manajemen Sekolah',
+          text: 'Terima kasih atas laporannya. Saat ini teknisi vendor sedang melakukan klaim garansi terhadap 22 unit PC dan perbaikan talang atap Gedung Lab B telah dijadwalkan pada pencairan BOS Tahap berjalan.',
+          respondedAt: '2026-10-29 11:20 WIB'
+        },
+        satisfactionVotes: { satisfied: 14, unsatisfied: 82 },
+        publicComments: [
+          {
+            id: 'cmt-waru-02',
+            author: 'Siti Aminah',
+            role: 'Wali Murid',
+            text: 'Sampai hari Jumat kemarin atap pojok lab masih ditaruh ember plastik, mohon buktinya sebelum tim asesor datang!',
+            date: '2026-10-30'
+          }
+        ]
       },
       {
         id: 'rep-013',
@@ -823,7 +887,15 @@ export const mockSchools: School[] = [
         text: 'Toilet siswa baunya sampai ke koridor kelas XI. Air kran sering mati sejak bulan Agustus. Anak saya sampai menahan buang air kecil sampai pulang ke rumah karena jijik. Padahal kami dengar dana BOS sarpras ratusan juta diserap.',
         photoUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80',
         upvotes: 98,
-        status: 'verified'
+        status: 'verified',
+        followUpStatus: 'in_progress_school',
+        officialResponse: {
+          responderName: 'Waka Sarpras SMAN X Waru',
+          responderRole: 'Komite & Sarpras Sekolah',
+          text: 'Terima kasih atas laporannya, perbaikan pompa air dan sanitasi Gedung B telah dianggarkan pada pencairan BOS Tahap II minggu ini dan sedang dikerjakan tukang.',
+          respondedAt: '2026-10-26 15:40 WIB'
+        },
+        satisfactionVotes: { satisfied: 19, unsatisfied: 64 }
       },
       {
         id: 'rep-014',
@@ -1062,7 +1134,254 @@ export const mockSchools: School[] = [
         facilityTag: 'Sanitasi',
         text: 'Toilet sekolah hanya 2 bilik yang bisa digunakan untuk ratusan siswa. Antrean panjang setiap istirahat.',
         upvotes: 38,
-        status: 'verified'
+        status: 'verified',
+        followUpStatus: 'in_progress_school',
+        officialResponse: {
+          responderName: 'Kepala SMP Bina Prestasi Surabaya',
+          responderRole: 'Kepala Sekolah',
+          text: 'Terima kasih Ibu Ratna. Renovasi 4 bilik toilet lantai 1 sedang berlangsung mulai pekan ini dengan estimasi tuntas dalam 10 hari kerja.',
+          respondedAt: '2026-10-24 09:30 WIB'
+        },
+        satisfactionVotes: { satisfied: 24, unsatisfied: 8 }
+      }
+    ]
+  },
+
+  // --- MULTI-PROVINCE & MULTI-CITY GRANULAR DRILL-DOWN SCHOOLS (FINAL SUBMISSION) ---
+  {
+    id: 'sch-013',
+    npsn: '20533660',
+    name: 'SMAN 3 Malang',
+    level: 'SMA',
+    provinsi: 'Jawa Timur',
+    kabupatenKota: 'Kota Malang',
+    kecamatan: 'Klojen',
+    district: 'Klojen',
+    city: 'Kota Malang',
+    address: 'Jl. Sultan Agung Utara No.7, Klojen, Kec. Klojen, Kota Malang',
+    accreditationGrade: 'A',
+    lastAccreditationYear: 2021,
+    currentStageNumber: 5,
+    slaStatus: 'on_track',
+    slaDaysDifference: -5,
+    claimedScore: 96.2,
+    verifiedScore: 94.8,
+    bosBudget: {
+      totalReceived: 1790000000,
+      absorbed: 1758000000,
+      absorptionRate: 98.2,
+      reportedAllocations: {
+        sarpras: 540000000,
+        operasional: 590000000,
+        guruHonor: 328000000,
+        digitalisasi: 300000000
+      }
+    },
+    aiRiskLevel: 'verified',
+    aiAssessorBrief: {
+      summary: 'Kesesuaian klaim dokumen Sispena dengan audit fisik warga di Kota Malang mencapai 98.5%. Laboratorium riset dan perpustakaan digital terverifikasi penuh.',
+      discrepancyRate: 1.5,
+      riskBadge: 'Integritas Sangat Baik',
+      mandatoryInvestigationFocus: [
+        'Verifikasi akhir berita acara pleno penerbitan SK Akreditasi A unggul',
+        'Dokumentasi praktik baik (best-practice) keterbukaan papan dana BOS digital'
+      ],
+      flags: ['Dokumen Sah 100%', 'Transparansi BOS Terbaik Malang'],
+      generatedAt: '2026-11-02 10:15 WIB'
+    },
+    stageDetails: [
+      { stageNumber: 1, name: 'Submit Berkas Sispena', status: 'completed', daysSpent: 6, maxSlaDays: 14 },
+      { stageNumber: 2, name: 'Verifikasi Berkas Provinsi', status: 'completed', daysSpent: 5, maxSlaDays: 10 },
+      { stageNumber: 3, name: 'Penugasan Tim Asesor', status: 'completed', daysSpent: 8, maxSlaDays: 14 },
+      { stageNumber: 4, name: 'Visitasi Lapangan', status: 'completed', daysSpent: 7, maxSlaDays: 10 },
+      { stageNumber: 5, name: 'Pleno & Terbit Sertifikat SK', status: 'in_progress', daysSpent: 3, maxSlaDays: 14 }
+    ],
+    radarStandards: [
+      { subject: 'Standar Kelulusan', claimedScore: 98, verifiedScore: 97, fullMark: 100 },
+      { subject: 'Standar Isi', claimedScore: 96, verifiedScore: 95, fullMark: 100 },
+      { subject: 'Standar Proses', claimedScore: 97, verifiedScore: 95, fullMark: 100 },
+      { subject: 'Standar Penilaian', claimedScore: 96, verifiedScore: 95, fullMark: 100 },
+      { subject: 'Standar PTK', claimedScore: 95, verifiedScore: 94, fullMark: 100 },
+      { subject: 'Standar Sarpras', claimedScore: 96, verifiedScore: 94, fullMark: 100 },
+      { subject: 'Standar Pengelolaan', claimedScore: 96, verifiedScore: 95, fullMark: 100 },
+      { subject: 'Standar Pembiayaan', claimedScore: 96, verifiedScore: 94, fullMark: 100 }
+    ],
+    citizenReports: [
+      {
+        id: 'rep-019',
+        author: 'Dr. Wahyudianto',
+        authorRole: 'Komite Sekolah',
+        date: '2026-10-29',
+        facilityTag: 'Transparansi Dana',
+        text: 'Setiap rupiah serapan Dana BOS SMAN 3 Malang dipublikasikan secara real-time di dashboard lobi sekolah dan grup resmi orang tua.',
+        upvotes: 52,
+        status: 'verified',
+        followUpStatus: 'resolved',
+        officialResponse: {
+          responderName: 'Kepala SMAN 3 Malang',
+          responderRole: 'Manajemen Sekolah',
+          text: 'Terima kasih atas sinergi Komite Sekolah dan orang tua siswa dalam mengawal akuntabilitas anggaran sekolah.',
+          respondedAt: '2026-10-30 08:45 WIB'
+        },
+        satisfactionVotes: { satisfied: 50, unsatisfied: 0 }
+      }
+    ]
+  },
+  {
+    id: 'sch-014',
+    npsn: '20102568',
+    name: 'SMAN 70 Jakarta Selatan',
+    level: 'SMA',
+    provinsi: 'DKI Jakarta',
+    kabupatenKota: 'Jakarta Selatan',
+    kecamatan: 'Kebayoran Baru',
+    district: 'Kebayoran Baru',
+    city: 'Jakarta Selatan',
+    address: 'Jl. Bulungan Blok C No.1, Kramat Pela, Kec. Kebayoran Baru, Jakarta Selatan',
+    accreditationGrade: 'A',
+    lastAccreditationYear: 2021,
+    currentStageNumber: 4,
+    slaStatus: 'on_track',
+    slaDaysDifference: -3,
+    claimedScore: 95.4,
+    verifiedScore: 92.8,
+    bosBudget: {
+      totalReceived: 2240000000,
+      absorbed: 2195000000,
+      absorptionRate: 98.0,
+      reportedAllocations: {
+        sarpras: 680000000,
+        operasional: 740000000,
+        guruHonor: 415000000,
+        digitalisasi: 360000000
+      }
+    },
+    aiRiskLevel: 'verified',
+    aiAssessorBrief: {
+      summary: 'Audit fasilitas laboratorium komputer dan perpustakaan di Kebayoran Baru menunjukkan tingkat kepatuhan tinggi terhadap standar BAN-PDM DKI Jakarta.',
+      discrepancyRate: 2.6,
+      riskBadge: 'Integritas Sangat Baik',
+      mandatoryInvestigationFocus: [
+        'Uji petik pemeliharaan sarana olahraga indoor dan tribun siswa',
+        'Validasi integrasi e-RKAS DKI Jakarta dengan pelaporan BOS pusat'
+      ],
+      flags: ['Audit Publik Terverifikasi', 'SLA Provinsi DKI Tepat Waktu'],
+      generatedAt: '2026-11-03 11:00 WIB'
+    },
+    stageDetails: [
+      { stageNumber: 1, name: 'Submit Berkas Sispena', status: 'completed', daysSpent: 7, maxSlaDays: 14 },
+      { stageNumber: 2, name: 'Verifikasi Berkas Provinsi', status: 'completed', daysSpent: 6, maxSlaDays: 10 },
+      { stageNumber: 3, name: 'Penugasan Tim Asesor', status: 'completed', daysSpent: 9, maxSlaDays: 14 },
+      { stageNumber: 4, name: 'Visitasi Lapangan', status: 'in_progress', daysSpent: 4, maxSlaDays: 10 },
+      { stageNumber: 5, name: 'Pleno & Terbit Sertifikat SK', status: 'pending', daysSpent: 0, maxSlaDays: 14 }
+    ],
+    radarStandards: [
+      { subject: 'Standar Kelulusan', claimedScore: 97, verifiedScore: 95, fullMark: 100 },
+      { subject: 'Standar Isi', claimedScore: 96, verifiedScore: 94, fullMark: 100 },
+      { subject: 'Standar Proses', claimedScore: 95, verifiedScore: 93, fullMark: 100 },
+      { subject: 'Standar Penilaian', claimedScore: 95, verifiedScore: 93, fullMark: 100 },
+      { subject: 'Standar PTK', claimedScore: 94, verifiedScore: 92, fullMark: 100 },
+      { subject: 'Standar Sarpras', claimedScore: 96, verifiedScore: 91, fullMark: 100 },
+      { subject: 'Standar Pengelolaan', claimedScore: 95, verifiedScore: 92, fullMark: 100 },
+      { subject: 'Standar Pembiayaan', claimedScore: 95, verifiedScore: 92, fullMark: 100 }
+    ],
+    citizenReports: [
+      {
+        id: 'rep-020',
+        author: 'Rizky Pratama',
+        authorRole: 'Wali Murid',
+        date: '2026-11-01',
+        facilityTag: 'Lab Komputer',
+        text: 'Fasilitas laboratorium multimedia dan smart classroom sangat mendukung pembelajaran berbasis proyek.',
+        upvotes: 33,
+        status: 'verified',
+        followUpStatus: 'resolved',
+        officialResponse: {
+          responderName: 'Kepala SMAN 70 Jakarta',
+          responderRole: 'Kepala Sekolah',
+          text: 'Terima kasih atas dukungannya. Seluruh perangkat smart classroom diaudit berkala setiap semester.',
+          respondedAt: '2026-11-02 09:10 WIB'
+        },
+        satisfactionVotes: { satisfied: 31, unsatisfied: 1 }
+      }
+    ]
+  },
+  {
+    id: 'sch-015',
+    npsn: '20219271',
+    name: 'SMAN 3 Bandung',
+    level: 'SMA',
+    provinsi: 'Jawa Barat',
+    kabupatenKota: 'Kota Bandung',
+    kecamatan: 'Coblong',
+    district: 'Coblong',
+    city: 'Kota Bandung',
+    address: 'Jl. Belitung No.8, Merdeka, Kec. Sumur Bandung / Coblong, Kota Bandung',
+    accreditationGrade: 'A',
+    lastAccreditationYear: 2021,
+    currentStageNumber: 3,
+    slaStatus: 'overdue',
+    slaDaysDifference: 16,
+    claimedScore: 94.6,
+    verifiedScore: 91.2,
+    bosBudget: {
+      totalReceived: 1920000000,
+      absorbed: 1850000000,
+      absorptionRate: 96.4,
+      reportedAllocations: {
+        sarpras: 610000000,
+        operasional: 640000000,
+        guruHonor: 340000000,
+        digitalisasi: 260000000
+      }
+    },
+    aiRiskLevel: 'bottleneck',
+    aiAssessorBrief: {
+      summary: 'Kualitas akademik dan fasilitas sekolah sangat baik, namun penjadwalan asesor wilayah Kota Bandung mengalami keterlambatan 16 hari di atas SLA.',
+      discrepancyRate: 3.4,
+      riskBadge: 'Bottleneck Jadwal Asesor Jabar',
+      mandatoryInvestigationFocus: [
+        'Percepatan penerbitan surat tugas asesor BAN-PDM Provinsi Jawa Barat',
+        'Pemeriksaan pemeliharaan bangunan cagar budaya ruang kelas utama'
+      ],
+      flags: ['Overdue SLA 16 Hari', 'Mutu Sarpras Terverifikasi'],
+      generatedAt: '2026-11-03 14:20 WIB'
+    },
+    stageDetails: [
+      { stageNumber: 1, name: 'Submit Berkas Sispena', status: 'completed', daysSpent: 8, maxSlaDays: 14 },
+      { stageNumber: 2, name: 'Verifikasi Berkas Provinsi', status: 'completed', daysSpent: 7, maxSlaDays: 10 },
+      { stageNumber: 3, name: 'Penugasan Tim Asesor', status: 'overdue', daysSpent: 30, maxSlaDays: 14 },
+      { stageNumber: 4, name: 'Visitasi Lapangan', status: 'pending', daysSpent: 0, maxSlaDays: 10 },
+      { stageNumber: 5, name: 'Pleno & Terbit Sertifikat SK', status: 'pending', daysSpent: 0, maxSlaDays: 14 }
+    ],
+    radarStandards: [
+      { subject: 'Standar Kelulusan', claimedScore: 96, verifiedScore: 94, fullMark: 100 },
+      { subject: 'Standar Isi', claimedScore: 95, verifiedScore: 93, fullMark: 100 },
+      { subject: 'Standar Proses', claimedScore: 95, verifiedScore: 92, fullMark: 100 },
+      { subject: 'Standar Penilaian', claimedScore: 94, verifiedScore: 92, fullMark: 100 },
+      { subject: 'Standar PTK', claimedScore: 94, verifiedScore: 91, fullMark: 100 },
+      { subject: 'Standar Sarpras', claimedScore: 94, verifiedScore: 88, fullMark: 100 },
+      { subject: 'Standar Pengelolaan', claimedScore: 95, verifiedScore: 91, fullMark: 100 },
+      { subject: 'Standar Pembiayaan', claimedScore: 94, verifiedScore: 90, fullMark: 100 }
+    ],
+    citizenReports: [
+      {
+        id: 'rep-021',
+        author: 'Kang Dedi Mulyadi',
+        authorRole: 'Alumni',
+        date: '2026-10-28',
+        facilityTag: 'Perpustakaan',
+        text: 'Koleksi literasi digital perpustakaan sudah sangat maju, hanya menunggu jadwal visitasi asesor turun.',
+        upvotes: 41,
+        status: 'verified',
+        followUpStatus: 'resolved',
+        officialResponse: {
+          responderName: 'Wakasek Humas SMAN 3 Bandung',
+          responderRole: 'Manajemen Sekolah',
+          text: 'Hatur nuhun atas perhatiannya. Kami telah berkoordinasi dengan BAN-PDM Jabar untuk penjadwalan visitasi pekan depan.',
+          respondedAt: '2026-10-29 13:00 WIB'
+        },
+        satisfactionVotes: { satisfied: 38, unsatisfied: 2 }
       }
     ]
   }

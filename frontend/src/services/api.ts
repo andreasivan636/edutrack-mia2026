@@ -7,15 +7,16 @@ import {
   UpdateSlaPayload,
   SlaStatus,
   AccreditationStageItem,
-  FacilityTag
+  FacilityTag,
+  FollowUpStatus
 } from '../types/school';
 import { mockSchools, mockTransparencyStats } from '../data/mockSchools';
 
 const API_BASE = 'http://localhost:8080/api';
 
 const STORAGE_KEYS = {
-  SCHOOLS: 'edutrack_schools_v2',
-  STATS: 'edutrack_stats_v2',
+  SCHOOLS: 'edutrack_schools_v3',
+  STATS: 'edutrack_stats_v3',
   AUTH: 'edutrack_auth_v2'
 };
 
@@ -38,8 +39,65 @@ export const STAGE_METADATA: { stageNumber: number; name: string; maxSlaDays: nu
   { stageNumber: 5, name: 'Pleno & Terbit Sertifikat SK', maxSlaDays: 14 }
 ];
 
+function normalizeSchoolData(schools: School[]): School[] {
+  return schools.map((s) => {
+    const provinsi =
+      s.provinsi ||
+      (s.city.includes('Jakarta')
+        ? 'DKI Jakarta'
+        : s.city.includes('Bandung')
+        ? 'Jawa Barat'
+        : 'Jawa Timur');
+    const kabupatenKota = s.kabupatenKota || s.city;
+    const kecamatan = s.kecamatan || s.district;
+
+    const citizenReports: CitizenReportItem[] = (s.citizenReports || []).map((r) => {
+      const defaultStatus: FollowUpStatus =
+        r.followUpStatus ||
+        (r.status === 'investigating'
+          ? 'waiting_response'
+          : s.aiRiskLevel === 'high_discrepancy'
+          ? 'in_progress_school'
+          : 'resolved');
+
+      const defaultResponse =
+        r.officialResponse ||
+        (defaultStatus !== 'waiting_response'
+          ? {
+              responderName: `Kepala ${s.name}`,
+              responderRole: 'Pihak Manajemen & Tim BOS Sekolah',
+              text:
+                defaultStatus === 'resolved'
+                  ? `Terima kasih atas laporan dan pengawasan warga pada fasilitas ${r.facilityTag}. Tindak lanjut pemeliharaan telah dituntaskan sesuai RKAS BOS dan diverifikasi bersama Komite Sekolah.`
+                  : `Terima kasih atas masukannya terkait ${r.facilityTag}. Pihak sekolah telah menjadwalkan perbaikan fisik pada pencairan Dana BOS tahap berjalan minggu ini.`,
+              respondedAt: `${r.date} 14:30 WIB`
+            }
+          : undefined);
+
+      return {
+        ...r,
+        followUpStatus: defaultStatus,
+        officialResponse: defaultResponse,
+        satisfactionVotes: r.satisfactionVotes || {
+          satisfied: defaultStatus === 'resolved' ? Math.max(8, Math.round(r.upvotes * 0.82)) : 5,
+          unsatisfied: defaultStatus === 'resolved' ? 1 : Math.max(4, Math.round(r.upvotes * 0.45))
+        },
+        publicComments: r.publicComments || []
+      };
+    });
+
+    return {
+      ...s,
+      provinsi,
+      kabupatenKota,
+      kecamatan,
+      citizenReports
+    };
+  });
+}
+
 function cloneDefaultSchools(): School[] {
-  return JSON.parse(JSON.stringify(mockSchools));
+  return normalizeSchoolData(JSON.parse(JSON.stringify(mockSchools)));
 }
 
 function cloneDefaultStats(): TransparencyStats {
@@ -52,7 +110,7 @@ function loadPersistedSchools(): School[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return normalizeSchoolData(parsed);
       }
     }
   } catch {
@@ -353,7 +411,10 @@ export const apiService = {
       text: newReportData.text,
       photoUrl: newReportData.photoUrl,
       upvotes: 1,
-      status: 'investigating'
+      status: 'investigating',
+      followUpStatus: 'waiting_response',
+      satisfactionVotes: { satisfied: 0, unsatisfied: 0 },
+      publicComments: []
     };
 
     const res = await requestBackend<CitizenReportItem>(`/schools/${schoolId}/reports`, {
@@ -549,6 +610,115 @@ export const apiService = {
     return true;
   },
 
+  // ==================== TWO-WAY CITIZEN FEEDBACK LOOP ====================
+  async submitOfficialSchoolResponse(
+    schoolId: string,
+    reportId: string,
+    payload: {
+      followUpStatus: FollowUpStatus;
+      responderName: string;
+      responderRole: string;
+      text: string;
+    }
+  ): Promise<{ school: School | null; report: CitizenReportItem | null }> {
+    const respondedAt = formatWibNow();
+    let updatedSchool: School | null = null;
+    let updatedReport: CitizenReportItem | null = null;
+
+    await requestBackend(`/reports/${reportId}/response`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...payload, schoolId, respondedAt })
+    });
+
+    localSchools = localSchools.map((s) => {
+      if (s.id !== schoolId && !s.citizenReports.some((r) => r.id === reportId)) {
+        return s;
+      }
+      const nextReports = s.citizenReports.map((r) => {
+        if (r.id !== reportId) return r;
+        const modified: CitizenReportItem = {
+          ...r,
+          followUpStatus: payload.followUpStatus,
+          officialResponse: {
+            responderName: payload.responderName.trim() || `Kepala ${s.name}`,
+            responderRole: payload.responderRole.trim() || 'Manajemen Sekolah & Tim BOS',
+            text: payload.text.trim(),
+            respondedAt
+          }
+        };
+        updatedReport = modified;
+        return modified;
+      });
+      const nextSchool = { ...s, citizenReports: nextReports };
+      updatedSchool = nextSchool;
+      return nextSchool;
+    });
+
+    persistLocalState();
+    return { school: updatedSchool, report: updatedReport };
+  },
+
+  async voteReportSatisfaction(
+    schoolId: string,
+    reportId: string,
+    voteType: 'satisfied' | 'unsatisfied'
+  ): Promise<School | null> {
+    let updatedSchool: School | null = null;
+    localSchools = localSchools.map((s) => {
+      if (s.id !== schoolId) return s;
+      const nextReports = s.citizenReports.map((r) => {
+        if (r.id !== reportId) return r;
+        const prevVotes = r.satisfactionVotes || { satisfied: 0, unsatisfied: 0 };
+        return {
+          ...r,
+          satisfactionVotes: {
+            satisfied:
+              voteType === 'satisfied' ? prevVotes.satisfied + 1 : prevVotes.satisfied,
+            unsatisfied:
+              voteType === 'unsatisfied' ? prevVotes.unsatisfied + 1 : prevVotes.unsatisfied
+          }
+        };
+      });
+      const nextSchool = { ...s, citizenReports: nextReports };
+      updatedSchool = nextSchool;
+      return nextSchool;
+    });
+    persistLocalState();
+    return updatedSchool;
+  },
+
+  async addReportPublicComment(
+    schoolId: string,
+    reportId: string,
+    payload: { author: string; role: string; text: string }
+  ): Promise<School | null> {
+    let updatedSchool: School | null = null;
+    const newComment = {
+      id: `cmt-${Date.now()}`,
+      author: payload.author.trim() || 'Wali Murid / Warga Terverifikasi',
+      role: payload.role.trim() || 'Wali Murid',
+      text: payload.text.trim(),
+      date: new Date().toISOString().split('T')[0]
+    };
+
+    localSchools = localSchools.map((s) => {
+      if (s.id !== schoolId) return s;
+      const nextReports = s.citizenReports.map((r) => {
+        if (r.id !== reportId) return r;
+        return {
+          ...r,
+          publicComments: [...(r.publicComments || []), newComment]
+        };
+      });
+      const nextSchool = { ...s, citizenReports: nextReports };
+      updatedSchool = nextSchool;
+      return nextSchool;
+    });
+
+    persistLocalState();
+    return updatedSchool;
+  },
+
   // ==================== SLA STAGE UPDATER ====================
   async updateSchoolSla(
     schoolId: string,
@@ -664,6 +834,15 @@ export const apiService = {
       npsn: payload.npsn.trim(),
       name: payload.name.trim(),
       level: payload.level,
+      provinsi:
+        payload.provinsi ||
+        (payload.city.includes('Jakarta')
+          ? 'DKI Jakarta'
+          : payload.city.includes('Bandung')
+          ? 'Jawa Barat'
+          : 'Jawa Timur'),
+      kabupatenKota: payload.kabupatenKota || payload.city.trim(),
+      kecamatan: payload.kecamatan || payload.district.trim(),
       district: payload.district.trim(),
       city: payload.city.trim(),
       address:
